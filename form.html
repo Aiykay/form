@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <link rel="stylesheet" href="./css/form.css">
+</head>
+<body>
+    <main class="card" role="main">
+    <h1>Create account</h1>
+    <p class="lead">Enter your details. Fields are validated client-side.</p>
+
+    <form id="signupForm" novalidate>
+      <div class="field">
+        <label for="name">Full name</label>
+        <input id="name" name="name" type="text" placeholder="Jane Doe" required minlength="2" />
+        <div class="error" id="nameError">Please enter your name (at least 2 characters).</div>
+      </div>
+
+      <div class="field">
+        <label for="email">Email address</label>
+        <input id="email" name="email" type="email" placeholder="you@example.com" required />
+        <div class="error" id="emailError">Please enter a valid email address.</div>
+      </div>
+
+      <div class="field">
+        <label for="phone">Telephone</label>
+        <input id="phone" name="phone" type="tel" placeholder="+1 555 555 5555" inputmode="tel"
+               pattern="^\+?[0-9\-\s]{7,20}$" />
+        <div class="helper">Include country code (e.g. +1). Numbers, spaces and dashes allowed.</div>
+        <div class="error" id="phoneError">Please enter a valid phone number (7–20 digits, optional +).</div>
+      </div>
+
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="password-row">
+          <input id="password" name="password" type="password" placeholder="Choose a secure password" required minlength="8" aria-describedby="pwHelp" />
+          <button type="button" class="toggle-btn" id="togglePassword" aria-pressed="false">Show</button>
+        </div>
+        <div id="pwHelp" class="helper">Minimum 8 characters. Use letters, numbers, and symbols for stronger password.</div>
+        <div class="strength" aria-hidden="true"><i id="strengthBar"></i></div>
+        <div class="strength-label" id="strengthLabel">Strength: —</div>
+        <div class="error" id="passwordError">Password must be at least 8 characters.</div>
+      </div>
+
+      <div class="submit-row">
+        <button type="submit" id="submitBtn">Sign up</button>
+        <div id="result" aria-live="polite"></div>
+      </div>
+    </form>
+</main>
+
+
+
+<script>
+     // Elements
+    const form = document.getElementById('signupForm');
+    const nameInput = document.getElementById('name');
+    const emailInput = document.getElementById('email');
+    const phoneInput = document.getElementById('phone');
+    const passwordInput = document.getElementById('password');
+
+    const nameError = document.getElementById('nameError');
+    const emailError = document.getElementById('emailError');
+    const phoneError = document.getElementById('phoneError');
+    const passwordError = document.getElementById('passwordError');
+
+    const toggleBtn = document.getElementById('togglePassword');
+    const strengthBar = document.getElementById('strengthBar');
+    const strengthLabel = document.getElementById('strengthLabel');
+
+    const result = document.getElementById('result');
+    const submitBtn = document.getElementById('submitBtn');
+
+    // Show/hide password
+    toggleBtn.addEventListener('click', () => {
+      const isHidden = passwordInput.type === 'password';
+      passwordInput.type = isHidden ? 'text' : 'password';
+      toggleBtn.textContent = isHidden ? 'Hide' : 'Show';
+      toggleBtn.setAttribute('aria-pressed', String(isHidden));
+      passwordInput.focus();
+    });
+
+    // Simple password strength estimator
+    function evaluateStrength(pw) {
+      let score = 0;
+      if (pw.length >= 8) score += 1;
+      if (/[a-z]/.test(pw)) score += 1;
+      if (/[A-Z]/.test(pw)) score += 1;
+      if (/[0-9]/.test(pw)) score += 1;
+      if (/[^A-Za-z0-9]/.test(pw)) score += 1;
+      return score; // 0-5
+    }
+
+    function updateStrengthUI() {
+      const pw = passwordInput.value;
+      const score = evaluateStrength(pw);
+      const percent = Math.round((score / 5) * 100);
+      strengthBar.style.width = percent + '%';
+
+      // color mapping (red -> yellow -> green)
+      if (score <= 1) strengthBar.style.background = '#f87171'; // red
+      else if (score <= 3) strengthBar.style.background = '#f59e0b'; // amber
+      else strengthBar.style.background = '#10b981'; // green
+
+      const labels = ['Very weak','Weak','Okay','Good','Strong','Very strong'];
+      strengthLabel.textContent = 'Strength: ' + labels[score];
+    }
+
+    passwordInput.addEventListener('input', () => {
+      updateStrengthUI();
+      // hide password error as user types
+      if (passwordInput.value.length >= 8) {
+        passwordError.classList.remove('visible');
+      }
+    });
+
+    // validation helpers
+    function showError(el) { el.classList.add('visible'); }
+    function hideError(el) { el.classList.remove('visible'); }
+
+    function validateName() {
+      const v = nameInput.value.trim();
+      if (v.length < 2) { showError(nameError); return false; }
+      hideError(nameError); return true;
+    }
+
+    function validateEmail() {
+      const v = emailInput.value.trim();
+      // Use HTML5 validity if possible
+      if (!emailInput.checkValidity()) { showError(emailError); return false; }
+      hideError(emailError); return true;
+    }
+
+    function validatePhone() {
+      const v = phoneInput.value.trim();
+      if (!v) { hideError(phoneError); return true; } // phone optional
+      const re = /^\+?[0-9\-\s]{7,20}$/;
+      if (!re.test(v)) { showError(phoneError); return false; }
+      hideError(phoneError); return true;
+    }
+
+    function validatePassword() {
+      const v = passwordInput.value;
+      if (v.length < 8) { showError(passwordError); return false; }
+      hideError(passwordError); return true;
+    }
+
+    // Validate on blur for quick feedback
+    nameInput.addEventListener('blur', validateName);
+    emailInput.addEventListener('blur', validateEmail);
+    phoneInput.addEventListener('blur', validatePhone);
+    passwordInput.addEventListener('blur', validatePassword);
+
+    // Form submit handling
+    form.addEventListener('submit', (ev) => {
+      ev.preventDefault(); // keep everything client-side in this demo
+
+      result.textContent = '';
+      result.className = '';
+
+      const ok = validateName() & validateEmail() & validatePhone() & validatePassword();
+
+      if (!ok) {
+        // one or more validations failed
+        result.textContent = 'Please fix the errors above and try again.';
+        result.className = 'error visible';
+        return;
+      }
+
+      // simulate saving or sending data (client-only)
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+
+      // gather JSON-like data
+      const payload = {
+        name: nameInput.value.trim(),
+        email: emailInput.value.trim(),
+        phone: phoneInput.value.trim(),
+        // NEVER log real passwords in production — here we only show a placeholder
+        password: '●●●●●●●●'
+      };
+
+      // Simulate a brief delay
+      setTimeout(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign up';
+        result.innerHTML = '<div class="success">Account created successfully! (Demo only — no server involved)</div>' +
+                            '<pre style="margin-top:10px;background:#f8fafc;padding:8px;border-radius:6px;font-size:13px;">' +
+                            JSON.stringify(payload, null, 2) +
+                            '</pre>';
+        // optionally clear the form
+        form.reset();
+        updateStrengthUI();
+      }, 750);
+    });
+
+    // Improve accessibility: remove error when user starts typing
+    [nameInput, emailInput, phoneInput].forEach(el => {
+      el.addEventListener('input', () => {
+        const id = el.id + 'Error';
+        const err = document.getElementById(id);
+        if (err) hideError(err);
+      });
+    });
+
+    // initialize strength bar
+    updateStrengthUI();
+
+</script>
+</body>
+</html>
